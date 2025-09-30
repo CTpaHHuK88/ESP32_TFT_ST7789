@@ -1,8 +1,8 @@
 #include <TFT_eSPI.h>
 #include <WiFi.h>  
 
-const char* ssid = "sb";  
-const char* password = "bazalt222555888";  
+const char* ssid = "";  
+const char* password = "";  
 
 TFT_eSPI tft = TFT_eSPI();
 
