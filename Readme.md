@@ -147,3 +147,245 @@ void loop() {
     *   Убедитесь, что библиотека `TFT_eSPI` установлена правильно.
     *   Закомментируйте в `User_Setup.h` все ненужные драйверы.
 
+
+
+
+
+### Анализ вашего файла настроек:
+
+**Правильные настройки:**
+- `#define ST7789_DRIVER` - активирован правильный драйвер ✅
+- `#define TFT_WIDTH 240` - правильная ширина ✅
+- `#define TFT_HEIGHT 320` - правильная высота для дисплея 240x320 ✅
+- `#define USE_HSPI_PORT` - использование HSPI порта на ESP32 ✅
+- `#define SPI_FREQUENCY 27000000` - хорошая частота для ST7789 ✅
+
+**Потенциальные проблемы и настройки, которые нужно проверить:**
+
+### 1. Настройки пинов ESP32 (Секция 2)
+
+В вашем файле настроены пины по умолчанию для ESP32:
+
+```cpp
+#define TFT_MOSI 23
+#define TFT_SCLK 18
+#define TFT_CS   15  // Chip select control pin
+#define TFT_DC    2  // Data Command control pin
+#define TFT_RST   4  // Reset pin
+```
+
+**Проверьте:** Совпадают ли эти пины с вашим реальным подключением? Если вы подключали по схеме из предыдущего ответа (GPIO 23, 18, 5, 2, 4), то нужно исправить `TFT_CS` с 15 на 5.
+
+### 2. Подсветка (Backlight)
+
+Раскомментируйте и настройте управление подсветкой:
+
+```cpp
+#define TFT_BL   32            // LED back-light control pin
+#define TFT_BACKLIGHT_ON HIGH  // Level to turn ON back-light (HIGH or LOW)
+```
+
+### 3. Цветовой порядок (RGB/BGR)
+
+Если цвета отображаются неправильно (синий вместо красного и т.д.), раскомментируйте одну из строк:
+
+```cpp
+// #define TFT_RGB_ORDER TFT_RGB  // Colour order Red-Green-Blue
+// #define TFT_RGB_ORDER TFT_BGR  // Colour order Blue-Green-Red
+```
+
+### Исправленная версия секции с пинами для ESP32:
+
+```cpp
+// ###### EDIT THE PIN NUMBERS IN THE LINES FOLLOWING TO SUIT YOUR ESP32 SETUP ######
+
+#define TFT_MOSI 23
+#define TFT_SCLK 18
+#define TFT_CS    5  // Chip select control pin - ИЗМЕНИТЕ ЕСЛИ НУЖНО!
+#define TFT_DC    2  // Data Command control pin
+#define TFT_RST   4  // Reset pin (could connect to RST pin)
+//#define TFT_RST  -1  // Set TFT_RST to -1 if display RESET is connected to ESP32 board RST
+
+#define TFT_BL   32  // LED back-light control pin
+#define TFT_BACKLIGHT_ON HIGH  // Level to turn ON back-light
+```
+
+### Тестовый скетч для проверки:
+
+После настройки `User_Setup.h` используйте этот код для тестирования:
+
+```cpp
+#include <TFT_eSPI.h>
+TFT_eSPI tft = TFT_eSPI();
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Инициализация дисплея
+  tft.init();
+  tft.setRotation(0); // Попробуйте 0, 1, 2, 3 если изображение перевернуто
+  
+  // Включение подсветки
+  pinMode(32, OUTPUT);
+  digitalWrite(32, HIGH);
+  
+  tft.fillScreen(TFT_BLACK);
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.setCursor(10, 10);
+  tft.println("ST7789 Test");
+  tft.println("ESP32 Connected!");
+  
+  // Тест цветов
+  tft.fillRect(10, 60, 50, 30, TFT_RED);
+  tft.fillRect(70, 60, 50, 30, TFT_GREEN);
+  tft.fillRect(130, 60, 50, 30, TFT_BLUE);
+}
+
+void loop() {
+  delay(1000);
+}
+```
+
+### Если дисплей не работает:
+
+1. **Проверьте питание:** 3.3V и GND
+2. **Перепроверьте пины:** Убедитесь, что физическое подключение совпадает с настройками в коде
+3. **Попробуйте разные rotation:** `tft.setRotation(0)`, `tft.setRotation(1)`, etc.
+4. **Если цвета неправильные:** Раскомментируйте строку с `TFT_RGB_ORDER TFT_BGR`
+
+
+
+Для дисплея **1.69 дюйма с контроллером ST7789** наиболее вероятное разрешение — **240x280 пикселей**.
+
+### Правильные настройки для User_Setup.h:
+
+```cpp
+#define ST7789_DRIVER
+
+// Разрешение для 1.69" ST7789
+#define TFT_WIDTH  240
+#define TFT_HEIGHT 280
+
+// Настройки пинов ESP32 (измените под ваше подключение)
+#define TFT_MOSI 23
+#define TFT_SCLK 18
+#define TFT_CS   5   // Chip select
+#define TFT_DC   2   // Data/Command
+#define TFT_RST  4   // Reset
+
+// Подсветка (если управляется через GPIO)
+#define TFT_BL   32
+#define TFT_BACKLIGHT_ON HIGH
+
+// Дополнительные настройки
+#define SPI_FREQUENCY 27000000
+#define USE_HSPI_PORT
+```
+
+### Почему именно 240x280?
+
+1.69-дюймовые дисплеи ST7789 обычно имеют одно из этих разрешений:
+- **240x280** (самое распространенное для 1.69")
+- 240x240 (редко для 1.69")
+- 170x320 (вертикальное)
+
+### Как точно определить разрешение?
+
+**Способ 1: Посмотрите на маркировку дисплея или документацию**
+- Обычно указано в спецификации: "1.69 inch 240*280"
+
+**Способ 2: Эмпирическая проверка**
+Загрузите тестовый скетч с разными настройками:
+
+```cpp
+#include <TFT_eSPI.h>
+TFT_eSPI tft = TFT_eSPI();
+
+void testResolution(int width, int height, String label) {
+  tft.init();
+  tft.setRotation(0);
+  tft.fillScreen(TFT_BLACK);
+  
+  // Рисуем рамку по краям
+  tft.drawRect(0, 0, width, height, TFT_RED);
+  tft.drawRect(1, 1, width-2, height-2, TFT_RED);
+  
+  // Выводим информацию
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(1);
+  tft.setCursor(10, 10);
+  tft.print("Testing: ");
+  tft.print(label);
+  tft.setCursor(10, 25);
+  tft.print("Size: ");
+  tft.print(width);
+  tft.print("x");
+  tft.print(height);
+  
+  delay(3000);
+}
+
+void setup() {
+  Serial.begin(115200);
+  
+  // Тестируем возможные разрешения
+  testResolution(240, 280, "240x280 (most common)");
+  testResolution(240, 240, "240x240");
+  testResolution(170, 320, "170x320");
+  testResolution(240, 320, "240x320");
+}
+
+void loop() {}
+```
+
+### Если не уверены в размере:
+
+1. **Сначала попробуйте 240x280** — это наиболее вероятный вариант
+2. Если изображение обрезано или есть черные полосы — пробуйте другие варианты
+3. Ориентируйтесь на пропорции дисплея: 1.69" обычно ближе к квадратной форме
+
+### Тестовый скетч для окончательной проверки:
+
+```cpp
+#include <TFT_eSPI.h>
+TFT_eSPI tft = TFT_eSPI();
+
+void setup() {
+  Serial.begin(115200);
+  
+  tft.init();
+  tft.setRotation(0); // Пробуйте 0, 1, 2, 3 для правильной ориентации
+  tft.fillScreen(TFT_BLACK);
+  
+  // Включаем подсветку
+  pinMode(32, OUTPUT);
+  digitalWrite(32, HIGH);
+  
+  // Рисуем тестовую сетку
+  for (int i = 0; i < 240; i += 20) {
+    tft.drawLine(i, 0, i, 280, TFT_BLUE);
+  }
+  for (int i = 0; i < 280; i += 20) {
+    tft.drawLine(0, i, 240, i, TFT_BLUE);
+  }
+  
+  // Выводим информацию
+  tft.setTextColor(TFT_WHITE, TFT_BLACK);
+  tft.setTextSize(2);
+  tft.setCursor(10, 10);
+  tft.println("1.69\" ST7789");
+  tft.setTextSize(1);
+  tft.println("Resolution: 240x280");
+  
+  // Заливаем цветами углы
+  tft.fillCircle(20, 20, 15, TFT_RED);
+  tft.fillCircle(220, 20, 15, TFT_GREEN);
+  tft.fillCircle(20, 260, 15, TFT_BLUE);
+  tft.fillCircle(220, 260, 15, TFT_YELLOW);
+}
+
+void loop() {}
+```
+
+**Начните с 240x280** — в 90% случаев это правильное разрешение для 1.69-дюймового ST7789!
